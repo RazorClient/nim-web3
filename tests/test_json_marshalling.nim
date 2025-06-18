@@ -38,7 +38,7 @@ proc rand(_: type uint64): uint64 =
 proc rand[T: Quantity | U8Quantity](_: type T): T =
   var res: array[sizeof(T), byte]
   discard randomBytes(res)
-  T(uint64.fromBytesBE(res))
+  T(distinctBase(T).fromBytesBE(res))
 
 proc rand[T: ChainId](_: type T): T =
   var res: array[8, byte]
