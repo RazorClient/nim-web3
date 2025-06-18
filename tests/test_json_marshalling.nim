@@ -196,10 +196,10 @@ suite "JSON-RPC Quantity":
     checkRandomObject(ProofResponse)
     checkRandomObject(FilterOptions)
     checkRandomObject(TransactionArgs)
-    checkRandomObject(Authorization)
 
     checkRandomObject(BlockHeader)
     checkRandomObject(BlockObject)
+    checkRandomObject(AuthorizationObject)
     checkRandomObject(TransactionObject)
     checkRandomObject(ReceiptObject)
 
@@ -275,9 +275,9 @@ suite "JSON-RPC Quantity":
     let w = JrpcConv.encode(z)
     check w == """{"accessList":[],"error":"error","gasUsed":"0x0"}"""
 
-  test "Authorization":
-    let z = Authorization()
+  test "AuthorizationObject":
+    let z = AuthorizationObject()
     let w = JrpcConv.encode(z)
-    check w == """{"chainId":"0x0","address":"0x0000000000000000000000000000000000000000","nonce":"0x0","v":"0x0","r":"0x0","s":"0x0"}"""
-    let x = JrpcConv.decode(w, Authorization)
+    check w == """{"chainId":"0x0","address":"0x0000000000000000000000000000000000000000","nonce":"0x0","yParity":"0x0","r":"0x0","s":"0x0"}"""
+    let x = JrpcConv.decode(w, AuthorizationObject)
     check x == z
