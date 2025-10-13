@@ -37,6 +37,10 @@ createRpcSigsFromNim(RpcClient):
   proc engine_getPayloadV3(payloadId: Bytes8): GetPayloadV3Response
   proc engine_getPayloadV4(payloadId: Bytes8): GetPayloadV4Response
   proc engine_getPayloadV5(payloadId: Bytes8): GetPayloadV5Response
+  # https://eips.ethereum.org/EIPS/eip-7807
+  proc engine_getPayloadV6(payloadId: Bytes8): GetPayloadV6Response
+  proc engine_newPayloadV5(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
+
   proc engine_getPayloadBodiesByHashV1(hashes: seq[Hash32]): seq[Opt[ExecutionPayloadBodyV1]]
   proc engine_getPayloadBodiesByRangeV1(start: Quantity, count: Quantity): seq[Opt[ExecutionPayloadBodyV1]]
   proc engine_getBlobsV1(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV1Response
@@ -116,6 +120,13 @@ template getPayload*(
     payloadId: Bytes8): Future[GetPayloadV5Response] =
   engine_getPayloadV5(rpcClient, payloadId)
 
+# EIP-7807: SSZ-based payload templates
+template getPayload*(
+    rpcClient: RpcClient,
+    T: type GetPayloadV6Response,
+    payloadId: Bytes8): Future[GetPayloadV6Response] =
+  engine_getPayloadV6(rpcClient, payloadId)
+
 template getBlobs*(
     rpcClient: RpcClient,
     T: type GetBlobsV1Response,
@@ -155,6 +166,16 @@ template newPayload*(
     parentBeaconBlockRoot: Hash32,
     executionRequests: seq[seq[byte]]): Future[PayloadStatusV1] =
   engine_newPayloadV4(
+    rpcClient, payload, versionedHashes, parentBeaconBlockRoot, executionRequests)
+
+# EIP-7807: SSZ-based newPayload template
+template newPayload*(
+    rpcClient: RpcClient,
+    payload: ExecutionPayloadV4,
+    versionedHashes: seq[VersionedHash],
+    parentBeaconBlockRoot: Hash32,
+    executionRequests: seq[seq[byte]]): Future[PayloadStatusV1] =
+  engine_newPayloadV5(
     rpcClient, payload, versionedHashes, parentBeaconBlockRoot, executionRequests)
 
 template exchangeCapabilities*(

@@ -36,6 +36,8 @@ type
     withdrawals*: Opt[seq[WithdrawalV1]]
     blobGasUsed*: Opt[Quantity]
     excessBlobGas*: Opt[Quantity]
+    # EIP-7807: SSZ-specific
+    requestsHash*: Opt[Hash32]
 
   PayloadAttributes* = object
     timestamp*: Quantity
@@ -63,9 +65,12 @@ type
     V3
     V4
     V5
+    V6
 
 func version*(payload: ExecutionPayload): Version =
-  if payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
+  if payload.requestsHash.isSome:
+    Version.V6  # EIP-7807: SSZ-based payload
+  elif payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
     Version.V3
   elif payload.withdrawals.isSome:
     Version.V2
@@ -81,7 +86,9 @@ func version*(attr: PayloadAttributes): Version =
     Version.V1
 
 func version*(res: GetPayloadResponse): Version =
-  if res.blobsBundleV2.isSome and
+  if res.executionPayload.requestsHash.isSome:
+    Version.V6  # EIP-7807: SSZ-based payload (post-fork)
+  elif res.blobsBundleV2.isSome and
       res.blobsBundleV2.get.proofs.len == (CELLS_PER_EXT_BLOB * res.blobsBundleV2.get.blobs.len):
      Version.V5
   elif res.executionRequests.isSome:
@@ -402,6 +409,8 @@ func V5*(res: GetPayloadResponse): GetPayloadV5Response =
     executionRequests: res.executionRequests.get,
   )
 
+# V6*(res: GetPayloadResponse)
+
 func getPayloadResponse*(x: ExecutionPayloadV1): GetPayloadResponse =
   GetPayloadResponse(executionPayload: x.executionPayload)
 
@@ -438,3 +447,4 @@ func getPayloadResponse*(x: GetPayloadV5Response): GetPayloadResponse =
     shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder),
     executionRequests: Opt.some(x.executionRequests),
   )
+

@@ -21,6 +21,15 @@ export
 type
   TypedTransaction* = distinct seq[byte]
 
+  # https://eips.ethereum.org/EIPS/eip-7807
+  GasAmounts* = object
+    regular*: uint64
+    blob*: uint64
+
+  BlobFeesPerGas* = object
+    regular*: UInt256
+    blob*: UInt256
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#withdrawalv1
   WithdrawalV1* = object
     index*: Quantity
@@ -116,10 +125,35 @@ type
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
 
+  # EIP-7807: SSZ-based execution payload
+  # https://eips.ethereum.org/EIPS/eip-7807
+  # Per spec: ProgressiveContainer with 17 active fields
+  ExecutionPayloadV4* = object
+    parentHash*: Hash32                   # parent_hash
+    miner*: Address                       # miner
+    stateRoot*: Hash32                    # state_root
+    transactions*: seq[TypedTransaction]  # transactions (full list!)
+    receiptsRoot*: Hash32                 # receipts_root (not in payload, so we keep root)
+    number*: uint64                       # number
+    gasLimits*: GasAmounts                # gas_limits
+    gasUsed*: GasAmounts                  # gas_used
+    timestamp*: uint64                    # timestamp
+    extraData*: DynamicBytes[0, 32]       # extra_data
+    mixHash*: Hash32                      # mix_hash
+    baseFeesPerGas*: BlobFeesPerGas       # base_fees_per_gas
+    withdrawals*: seq[WithdrawalV1]       # withdrawals (full list!)
+    excessGas*: GasAmounts                # excess_gas
+    parentBeaconBlockRoot*: Hash32        # parent_beacon_block_root
+    requests*: seq[seq[byte]]             # requests (full ExecutionRequests!)
+    systemLogsRoot*: Hash32               # system_logs_root (not in payload, so we keep root)
+    # Note: blockHash is computed via hash_tree_root(), not a field
+    # Note: logsBloom removed - not in EIP-7807 spec
+
   SomeExecutionPayload* =
     ExecutionPayloadV1 |
     ExecutionPayloadV2 |
-    ExecutionPayloadV3
+    ExecutionPayloadV3 |
+    ExecutionPayloadV4
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/cancun.md#blobsbundlev1
   BlobsBundleV1* = object
@@ -238,6 +272,15 @@ type
     shouldOverrideBuilder*: bool
     executionRequests*: seq[seq[byte]]
 
+  # A Different Name for the Same Thing just to make it clearer
+  # EIP-7807: SSZ-based payload response
+  GetPayloadV6Response* = object
+    executionPayload*: ExecutionPayloadV4
+    blockValue*: UInt256
+    blobsBundle*: BlobsBundleV2
+    shouldOverrideBuilder*: bool
+    executionRequests*: seq[seq[byte]]
+
   GetBlobsV1Response* = seq[BlobAndProofV1]
 
   GetBlobsV2Response* = seq[BlobAndProofV2]
@@ -246,7 +289,9 @@ type
     ExecutionPayloadV1 |
     GetPayloadV2Response |
     GetPayloadV3Response |
-    GetPayloadV4Response
+    GetPayloadV4Response |
+    GetPayloadV5Response |
+    GetPayloadV6Response
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/identification.md#engine_getclientversionv1
   ClientVersionV1* = object
