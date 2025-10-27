@@ -92,6 +92,7 @@ GetPayloadV2ResponseExact.useDefaultSerializationIn JrpcConv
 GetPayloadV3Response.useDefaultSerializationIn JrpcConv
 GetPayloadV4Response.useDefaultSerializationIn JrpcConv
 GetPayloadV5Response.useDefaultSerializationIn JrpcConv
+GetPayloadV6Response.useDefaultSerializationIn JrpcConv
 ClientVersionV1.useDefaultSerializationIn JrpcConv
 
 #------------------------------------------------------------------------------
@@ -264,7 +265,7 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var Number)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     val = r.parseInt(uint64).Number
-  
+
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var TypedTransaction)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:

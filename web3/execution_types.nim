@@ -37,7 +37,6 @@ type
     blobGasUsed*: Opt[Quantity]
     excessBlobGas*: Opt[Quantity]
     # EIP-7807: SSZ-specific
-    requestsHash*: Opt[Hash32]
     systemLogsRoot*: Opt[Hash32]
 
   PayloadAttributes* = object
@@ -261,40 +260,6 @@ func V3*(p: ExecutionPayload): ExecutionPayloadV3 =
     excessBlobGas: p.excessBlobGas.get(0.Quantity)
   )
 
-func V4*(p: ExecutionPayload): ExecutionPayloadV4 =
-  ## Converts ExecutionPayload to ExecutionPayloadV4 (EIP-7807: SSZ-based)
-  ExecutionPayloadV4(
-    parentHash: p.parentHash,
-    miner: p.feeRecipient,
-    stateRoot: p.stateRoot,
-    transactions: p.transactions,
-    receiptsRoot: p.receiptsRoot,
-    number: uint64(p.blockNumber),
-    gasLimits: GasAmounts(
-      regular: uint64(p.gasLimit),
-      blob: 0  # Will need to be set from actual blob gas limit
-    ),
-    gasUsed: GasAmounts(
-      regular: uint64(p.gasUsed),
-      blob: uint64(p.blobGasUsed.get(0.Quantity))
-    ),
-    timestamp: uint64(p.timestamp),
-    extraData: p.extraData,
-    mixHash: p.prevRandao,
-    baseFeesPerGas: BlobFeesPerGas(
-      regular: p.baseFeePerGas,
-      blob: 0.u256  # Will need to be calculated from blob excess gas
-    ),
-    withdrawals: p.withdrawals.get(@[]),
-    excessGas: GasAmounts(
-      regular: 0,
-      blob: uint64(p.excessBlobGas.get(0.Quantity))
-    ),
-    parentBeaconBlockRoot: Hash32.default,  # Should be passed separately
-    requests: @[],  # Should be populated from executionRequests
-    systemLogsRoot: Hash32.default  # Should be calculated
-  )
-
 func V1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
   ExecutionPayloadV1(
     parentHash: p.parentHash,
@@ -419,7 +384,7 @@ func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
     stateRoot: p.stateRoot,
     receiptsRoot: p.receiptsRoot,
     logsBloom: Bytes256.default,  # Not available in V4
-    prevRandao: p.mixHash,
+    prevRandao:Bytes32(p.mixHash),
     blockNumber: Quantity(p.number),
     gasLimit: Quantity(p.gasLimits.regular),
     gasUsed: Quantity(p.gasUsed.regular),
@@ -431,7 +396,7 @@ func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
     withdrawals: Opt.some(p.withdrawals),
     blobGasUsed: Opt.some(Quantity(p.gasUsed.blob)),
     excessBlobGas: Opt.some(Quantity(p.excessGas.blob)),
-    requestsHash: Opt.none(Hash32)  # Would need to be computed from requests
+    systemLogsRoot: Opt.some(p.systemLogsRoot)
   )
 
 func V1*(res: GetPayloadResponse): ExecutionPayloadV1 =
@@ -463,15 +428,6 @@ func V4*(res: GetPayloadResponse): GetPayloadV4Response =
 func V5*(res: GetPayloadResponse): GetPayloadV5Response =
   GetPayloadV5Response(
     executionPayload: res.executionPayload.V3,
-    blockValue: res.blockValue.get,
-    blobsBundle: res.blobsBundleV2.get(BlobsBundleV2()),
-    shouldOverrideBuilder: res.shouldOverrideBuilder.get(false),
-    executionRequests: res.executionRequests.get,
-  )
-
-func V6*(res: GetPayloadResponse): GetPayloadV6Response =
-  GetPayloadV6Response(
-    executionPayload: res.executionPayload.V4,
     blockValue: res.blockValue.get,
     blobsBundle: res.blobsBundleV2.get(BlobsBundleV2()),
     shouldOverrideBuilder: res.shouldOverrideBuilder.get(false),
