@@ -185,6 +185,7 @@ type
     status*: Opt[Quantity]           # either 1 (success) or 0 (failure)
     blobGasUsed*: Opt[Quantity]      # uint64
     blobGasPrice*: Opt[UInt256]      # UInt256
+    authorities*: Opt[seq[Address]]  # EIP-7702: List of authority addresses that authorized code delegation
 
   SingleOrListKind* = enum
     slkNull

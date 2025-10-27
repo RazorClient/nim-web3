@@ -38,6 +38,7 @@ type
     excessBlobGas*: Opt[Quantity]
     # EIP-7807: SSZ-specific
     requestsHash*: Opt[Hash32]
+    systemLogsRoot*: Opt[Hash32]
 
   PayloadAttributes* = object
     timestamp*: Quantity
@@ -68,8 +69,8 @@ type
     V6
 
 func version*(payload: ExecutionPayload): Version =
-  if payload.requestsHash.isSome:
-    Version.V6  # EIP-7807: SSZ-based payload
+  if payload.systemLogsRoot.isSome:
+    Version.V6
   elif payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
     Version.V3
   elif payload.withdrawals.isSome:
@@ -86,8 +87,8 @@ func version*(attr: PayloadAttributes): Version =
     Version.V1
 
 func version*(res: GetPayloadResponse): Version =
-  if res.executionPayload.requestsHash.isSome:
-    Version.V6  # EIP-7807: SSZ-based payload (post-fork)
+  if res.executionPayload.systemLogsRoot.isSome:
+    Version.V6  # EIP-7807
   elif res.blobsBundleV2.isSome and
       res.blobsBundleV2.get.proofs.len == (CELLS_PER_EXT_BLOB * res.blobsBundleV2.get.blobs.len):
      Version.V5
@@ -260,6 +261,40 @@ func V3*(p: ExecutionPayload): ExecutionPayloadV3 =
     excessBlobGas: p.excessBlobGas.get(0.Quantity)
   )
 
+func V4*(p: ExecutionPayload): ExecutionPayloadV4 =
+  ## Converts ExecutionPayload to ExecutionPayloadV4 (EIP-7807: SSZ-based)
+  ExecutionPayloadV4(
+    parentHash: p.parentHash,
+    miner: p.feeRecipient,
+    stateRoot: p.stateRoot,
+    transactions: p.transactions,
+    receiptsRoot: p.receiptsRoot,
+    number: uint64(p.blockNumber),
+    gasLimits: GasAmounts(
+      regular: uint64(p.gasLimit),
+      blob: 0  # Will need to be set from actual blob gas limit
+    ),
+    gasUsed: GasAmounts(
+      regular: uint64(p.gasUsed),
+      blob: uint64(p.blobGasUsed.get(0.Quantity))
+    ),
+    timestamp: uint64(p.timestamp),
+    extraData: p.extraData,
+    mixHash: p.prevRandao,
+    baseFeesPerGas: BlobFeesPerGas(
+      regular: p.baseFeePerGas,
+      blob: 0.u256  # Will need to be calculated from blob excess gas
+    ),
+    withdrawals: p.withdrawals.get(@[]),
+    excessGas: GasAmounts(
+      regular: 0,
+      blob: uint64(p.excessBlobGas.get(0.Quantity))
+    ),
+    parentBeaconBlockRoot: Hash32.default,  # Should be passed separately
+    requests: @[],  # Should be populated from executionRequests
+    systemLogsRoot: Hash32.default  # Should be calculated
+  )
+
 func V1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
   ExecutionPayloadV1(
     parentHash: p.parentHash,
@@ -374,6 +409,31 @@ func executionPayload*(p: ExecutionPayloadV1OrV2): ExecutionPayload =
     withdrawals: p.withdrawals
   )
 
+func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
+  ## Converts ExecutionPayloadV4 (EIP-7807: SSZ-based) to ExecutionPayload
+  ## Note: blockHash cannot be recovered (computed via hash_tree_root in V4)
+  ## Note: logsBloom cannot be recovered (not present in EIP-7807)
+  ExecutionPayload(
+    parentHash: p.parentHash,
+    feeRecipient: p.miner,
+    stateRoot: p.stateRoot,
+    receiptsRoot: p.receiptsRoot,
+    logsBloom: Bytes256.default,  # Not available in V4
+    prevRandao: p.mixHash,
+    blockNumber: Quantity(p.number),
+    gasLimit: Quantity(p.gasLimits.regular),
+    gasUsed: Quantity(p.gasUsed.regular),
+    timestamp: Quantity(p.timestamp),
+    extraData: p.extraData,
+    baseFeePerGas: p.baseFeesPerGas.regular,
+    blockHash: Hash32.default,  # Cannot be recovered
+    transactions: p.transactions,
+    withdrawals: Opt.some(p.withdrawals),
+    blobGasUsed: Opt.some(Quantity(p.gasUsed.blob)),
+    excessBlobGas: Opt.some(Quantity(p.excessGas.blob)),
+    requestsHash: Opt.none(Hash32)  # Would need to be computed from requests
+  )
+
 func V1*(res: GetPayloadResponse): ExecutionPayloadV1 =
   res.executionPayload.V1
 
@@ -409,7 +469,14 @@ func V5*(res: GetPayloadResponse): GetPayloadV5Response =
     executionRequests: res.executionRequests.get,
   )
 
-# V6*(res: GetPayloadResponse)
+func V6*(res: GetPayloadResponse): GetPayloadV6Response =
+  GetPayloadV6Response(
+    executionPayload: res.executionPayload.V4,
+    blockValue: res.blockValue.get,
+    blobsBundle: res.blobsBundleV2.get(BlobsBundleV2()),
+    shouldOverrideBuilder: res.shouldOverrideBuilder.get(false),
+    executionRequests: res.executionRequests.get,
+  )
 
 func getPayloadResponse*(x: ExecutionPayloadV1): GetPayloadResponse =
   GetPayloadResponse(executionPayload: x.executionPayload)
@@ -439,6 +506,16 @@ func getPayloadResponse*(x: GetPayloadV4Response): GetPayloadResponse =
   )
 
 func getPayloadResponse*(x: GetPayloadV5Response): GetPayloadResponse =
+  GetPayloadResponse(
+    executionPayload: x.executionPayload.executionPayload,
+    blockValue: Opt.some(x.blockValue),
+    blobsBundle: Opt.none(BlobsBundleV1),
+    blobsBundleV2: Opt.some(x.blobsBundle),
+    shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder),
+    executionRequests: Opt.some(x.executionRequests),
+  )
+
+func getPayloadResponse*(x: GetPayloadV6Response): GetPayloadResponse =
   GetPayloadResponse(
     executionPayload: x.executionPayload.executionPayload,
     blockValue: Opt.some(x.blockValue),

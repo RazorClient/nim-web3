@@ -127,27 +127,24 @@ type
 
   # EIP-7807: SSZ-based execution payload
   # https://eips.ethereum.org/EIPS/eip-7807
-  # Per spec: ProgressiveContainer with 17 active fields
   ExecutionPayloadV4* = object
     parentHash*: Hash32                   # parent_hash
     miner*: Address                       # miner
     stateRoot*: Hash32                    # state_root
     transactions*: seq[TypedTransaction]  # transactions (full list!)
     receiptsRoot*: Hash32                 # receipts_root (not in payload, so we keep root)
-    number*: uint64                       # number
-    gasLimits*: GasAmounts                # gas_limits
-    gasUsed*: GasAmounts                  # gas_used
-    timestamp*: uint64                    # timestamp
-    extraData*: DynamicBytes[0, 32]       # extra_data
-    mixHash*: Hash32                      # mix_hash
-    baseFeesPerGas*: BlobFeesPerGas       # base_fees_per_gas
-    withdrawals*: seq[WithdrawalV1]       # withdrawals (full list!)
+    number*: uint64
+    gasLimits*: GasAmounts
+    gasUsed*: GasAmounts
+    timestamp*: uint64
+    extraData*: DynamicBytes[0, 32]
+    mixHash*: Hash32
+    baseFeesPerGas*: BlobFeesPerGas
+    withdrawals*: seq[WithdrawalV1]
     excessGas*: GasAmounts                # excess_gas
-    parentBeaconBlockRoot*: Hash32        # parent_beacon_block_root
-    requests*: seq[seq[byte]]             # requests (full ExecutionRequests!)
-    systemLogsRoot*: Hash32               # system_logs_root (not in payload, so we keep root)
-    # Note: blockHash is computed via hash_tree_root(), not a field
-    # Note: logsBloom removed - not in EIP-7807 spec
+    parentBeaconBlockRoot*: Hash32
+    requests*: seq[seq[byte]]
+    systemLogsRoot*: Hash32
 
   SomeExecutionPayload* =
     ExecutionPayloadV1 |

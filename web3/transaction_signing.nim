@@ -106,6 +106,9 @@ func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, txType: TxType): seq
     encodeTransactionEip4844(s, pk)
   of TxEip7702:
     encodeTransactionEip7702(s, pk)
+  of TxEip7807:
+    # EIP-7807: SSZ-based transactions
+    raise newException(ValueError, "EIP-7807 SSZ-based transaction encoding not yet implemented")
 
 func txType(s: TransactionArgs): TxType =
   if s.authorizationList.isSome:
