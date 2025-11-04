@@ -71,10 +71,13 @@ EthConfigObject.useDefaultSerializationIn JrpcConv
 #------------------------------------------------------------------------------
 
 WithdrawalV1.useDefaultSerializationIn JrpcConv
+GasAmounts.useDefaultSerializationIn JrpcConv
+BlobFeesPerGas.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV2.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV1OrV2.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV3.useDefaultSerializationIn JrpcConv
+ExecutionPayloadV4.useDefaultSerializationIn JrpcConv
 BlobsBundleV1.useDefaultSerializationIn JrpcConv
 BlobsBundleV2.useDefaultSerializationIn JrpcConv
 BlobAndProofV1.useDefaultSerializationIn JrpcConv
