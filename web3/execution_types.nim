@@ -257,7 +257,8 @@ func V3*(p: ExecutionPayload): ExecutionPayloadV3 =
     transactions: p.transactions,
     withdrawals: p.withdrawals.get,
     blobGasUsed: p.blobGasUsed.get(0.Quantity),
-    excessBlobGas: p.excessBlobGas.get(0.Quantity)
+    excessBlobGas: p.excessBlobGas.get(0.Quantity),
+    systemLogsRoot: p.systemLogsRoot
   )
 
 func V1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
@@ -352,7 +353,8 @@ func executionPayload*(p: ExecutionPayloadV3): ExecutionPayload =
     transactions: p.transactions,
     withdrawals: Opt.some(p.withdrawals),
     blobGasUsed: Opt.some(p.blobGasUsed),
-    excessBlobGas: Opt.some(p.excessBlobGas)
+    excessBlobGas: Opt.some(p.excessBlobGas),
+    systemLogsRoot: p.systemLogsRoot
   )
 
 func executionPayload*(p: ExecutionPayloadV1OrV2): ExecutionPayload =
@@ -376,8 +378,6 @@ func executionPayload*(p: ExecutionPayloadV1OrV2): ExecutionPayload =
 
 func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
   ## Converts ExecutionPayloadV4 (EIP-7807: SSZ-based) to ExecutionPayload
-  ## Note: blockHash cannot be recovered (computed via hash_tree_root in V4)
-  ## Note: logsBloom cannot be recovered (not present in EIP-7807)
   ExecutionPayload(
     parentHash: p.parentHash,
     feeRecipient: p.miner,
@@ -391,7 +391,7 @@ func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
     timestamp: Quantity(p.timestamp),
     extraData: p.extraData,
     baseFeePerGas: p.baseFeesPerGas.regular,
-    blockHash: Hash32.default,  # Cannot be recovered
+    blockHash: Hash32.default,
     transactions: p.transactions,
     withdrawals: Opt.some(p.withdrawals),
     blobGasUsed: Opt.some(Quantity(p.gasUsed.blob)),

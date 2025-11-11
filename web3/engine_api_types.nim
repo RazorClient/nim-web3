@@ -124,6 +124,7 @@ type
     withdrawals*: seq[WithdrawalV1]
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
+    systemLogsRoot*: Opt[Hash32]
 
   # EIP-7807: SSZ-based execution payload
   # https://eips.ethereum.org/EIPS/eip-7807
