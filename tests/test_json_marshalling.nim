@@ -309,15 +309,6 @@ suite "JSON-RPC Quantity":
     let w = EthJson.encode(z)
     check w == """{"accessList":[],"error":null,"gasUsed":"0x0"}"""
 
-  test "EthRpcJson keeps RPC optional fields as null":
-    let z = AccessListResult()
-    let w = EthRpcJson.encode(z)
-    check w == """{"accessList":[],"error":null,"gasUsed":"0x0"}"""
-
-    let decoded = EthRpcJson.decode(w, AccessListResult)
-    check decoded.error.isNone
-    check decoded.gasUsed == 0.Quantity
-
   test "AccessListResult with error":
     let z = AccessListResult(
       error: Opt.some("error")

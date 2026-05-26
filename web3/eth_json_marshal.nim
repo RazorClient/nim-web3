@@ -26,7 +26,7 @@ EthJson.automaticSerialization(JsonNode, true)
 createJsonFlavor EthRpcJson,
   automaticObjectSerialization = false,
   requireAllFields = false,
-  omitOptionalFields = false, # Don't skip optional fields==none in Writer
+  omitOptionalFields = true,
   allowUnknownFields = true,
   skipNullFields = true,      # Skip optional fields==null in Reader
   automaticPrimitivesSerialization = false

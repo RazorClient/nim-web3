@@ -84,7 +84,7 @@ BlockObject.useDefaultSerializationIn EthRpcJson
 TransactionObject.useDefaultSerializationIn EthJson
 TransactionObject.useDefaultSerializationIn EthRpcJson
 ReceiptObject.useDefaultSerializationIn EthJson
-ReceiptObject.useDefaultSerializationIn EthRpcJson
+ReceiptObject.useDefaultReaderIn EthRpcJson
 BlobScheduleObject.useDefaultSerializationIn EthJson
 BlobScheduleObject.useDefaultSerializationIn EthRpcJson
 ConfigObject.useDefaultSerializationIn EthJson
@@ -240,6 +240,13 @@ proc writeHexValue(w: var JsonWriter, v: openArray[byte])
     s.writeHex v
     s.write "\""
 
+
+template writeNullableMember(w: var JsonWriter, name: string, value: untyped) =
+  if value.isSome:
+    w.writeMember(name, value.get)
+  else:
+    w.writeMember(name):
+      w.writeValue JsonString("null")
 #------------------------------------------------------------------------------
 # Well, both rpc and chronicles share the same encoding of these types
 #------------------------------------------------------------------------------
@@ -538,6 +545,30 @@ proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: Opt[seq[ReceiptObj
     w.writeValue v.get
   else:
     w.writeValue JsonString("null")
+
+proc writeValue*(w: var JsonWriter[EthRpcJson], v: ReceiptObject)
+      {.gcsafe, raises: [IOError].} =
+  mixin writeValue
+
+  w.beginObject()
+  w.writeMember("transactionHash", v.transactionHash)
+  w.writeMember("transactionIndex", v.transactionIndex)
+  w.writeMember("blockHash", v.blockHash)
+  w.writeMember("blockNumber", v.blockNumber)
+  w.writeMember("from", v.`from`)
+  w.writeNullableMember("to", v.to)
+  w.writeMember("cumulativeGasUsed", v.cumulativeGasUsed)
+  w.writeMember("effectiveGasPrice", v.effectiveGasPrice)
+  w.writeMember("gasUsed", v.gasUsed)
+  w.writeNullableMember("contractAddress", v.contractAddress)
+  w.writeMember("logs", v.logs)
+  w.writeMember("logsBloom", v.logsBloom)
+  w.writeMember("type", v.`type`)
+  w.writeMember("root", v.root)
+  w.writeMember("status", v.status)
+  w.writeMember("blobGasUsed", v.blobGasUsed)
+  w.writeMember("blobGasPrice", v.blobGasPrice)
+  w.endObject()
 
 proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: seq[PrecompilePair])
       {.gcsafe, raises: [IOError].} =
