@@ -19,7 +19,7 @@ export
   eth_api_types,
   conversions
 
-createRpcSigsFromNim(RpcClient, EthJson):
+createRpcSigsFromNim(RpcClient, EthRpcJson):
   proc web3_clientVersion(): string
   proc web3_sha3(data: seq[byte]): Hash32
   proc net_version(): string
@@ -96,5 +96,5 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc debug_getRawReceipts(blockId: BlockIdentifier): seq[RlpEncodedBytes]
   proc debug_getRawTransaction(data: Hash32): RlpEncodedBytes
 
-createSingleRpcSig(RpcClient, "eth_getJsonLogs", EthJson):
+createSingleRpcSig(RpcClient, "eth_getJsonLogs", EthRpcJson):
   proc eth_getLogs(filterOptions: FilterOptions): seq[JsonString]

@@ -42,29 +42,55 @@ EthJson.automaticSerialization(bool, true)
 EthJson.automaticSerialization(float64, true)
 EthJson.automaticSerialization(array, true)
 
+EthRpcJson.automaticSerialization(string, true)
+EthRpcJson.automaticSerialization(JsonString, true)
+EthRpcJson.automaticSerialization(ref, true)
+EthRpcJson.automaticSerialization(seq, true)
+EthRpcJson.automaticSerialization(bool, true)
+EthRpcJson.automaticSerialization(float64, true)
+EthRpcJson.automaticSerialization(array, true)
+
 #------------------------------------------------------------------------------
 # eth_api_types
 #------------------------------------------------------------------------------
 
 SyncObject.useDefaultSerializationIn EthJson
+SyncObject.useDefaultSerializationIn EthRpcJson
 Withdrawal.useDefaultSerializationIn EthJson
+Withdrawal.useDefaultSerializationIn EthRpcJson
 AccessPair.useDefaultSerializationIn EthJson
+AccessPair.useDefaultSerializationIn EthRpcJson
 AccessListResult.useDefaultSerializationIn EthJson
+AccessListResult.useDefaultSerializationIn EthRpcJson
 LogObject.useDefaultSerializationIn EthJson
+LogObject.useDefaultSerializationIn EthRpcJson
 StorageProof.useDefaultSerializationIn EthJson
+StorageProof.useDefaultSerializationIn EthRpcJson
 ProofResponse.useDefaultSerializationIn EthJson
+ProofResponse.useDefaultSerializationIn EthRpcJson
 FilterOptions.useDefaultSerializationIn EthJson
+FilterOptions.useDefaultSerializationIn EthRpcJson
 TransactionArgs.useDefaultReaderIn EthJson
+TransactionArgs.useDefaultReaderIn EthRpcJson
 FeeHistoryResult.useDefaultSerializationIn EthJson
+FeeHistoryResult.useDefaultSerializationIn EthRpcJson
 Authorization.useDefaultSerializationIn EthJson
+Authorization.useDefaultSerializationIn EthRpcJson
 
 BlockHeader.useDefaultSerializationIn EthJson
+BlockHeader.useDefaultSerializationIn EthRpcJson
 BlockObject.useDefaultSerializationIn EthJson
+BlockObject.useDefaultSerializationIn EthRpcJson
 TransactionObject.useDefaultSerializationIn EthJson
+TransactionObject.useDefaultSerializationIn EthRpcJson
 ReceiptObject.useDefaultSerializationIn EthJson
+ReceiptObject.useDefaultSerializationIn EthRpcJson
 BlobScheduleObject.useDefaultSerializationIn EthJson
+BlobScheduleObject.useDefaultSerializationIn EthRpcJson
 ConfigObject.useDefaultSerializationIn EthJson
+ConfigObject.useDefaultSerializationIn EthRpcJson
 EthConfigObject.useDefaultSerializationIn EthJson
+EthConfigObject.useDefaultSerializationIn EthRpcJson
 
 #------------------------------------------------------------------------------
 # engine_api_types
@@ -218,21 +244,23 @@ proc writeHexValue(w: var JsonWriter, v: openArray[byte])
 # Well, both rpc and chronicles share the same encoding of these types
 #------------------------------------------------------------------------------
 
-type CommonJsonFlavors = EthJson | DefaultFlavor
+type
+  Web3JsonFlavors = EthJson | EthRpcJson
+  CommonJsonFlavors = EthJson | EthRpcJson | DefaultFlavor
 
 proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: DynamicBytes)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[N](w: var JsonWriter[EthJson], v: FixedBytes[N])
+proc writeValue*[N; F: Web3JsonFlavors](w: var JsonWriter[F], v: FixedBytes[N])
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*(w: var JsonWriter[EthJson], v: Address)
+proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: Address)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*(w: var JsonWriter[EthJson], v: Hash32)
+proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: Hash32)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
@@ -257,17 +285,17 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var DynamicByte
   wrapValueError:
     val = fromHex(DynamicBytes, r.parseString())
 
-proc readValue*[N](r: var JsonReader[EthJson], val: var FixedBytes[N])
+proc readValue*[N; F: Web3JsonFlavors](r: var JsonReader[F], val: var FixedBytes[N])
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     val = fromHex(FixedBytes[N], r.parseString())
 
-proc readValue*(r: var JsonReader[EthJson], val: var Address)
+proc readValue*[F: Web3JsonFlavors](r: var JsonReader[F], val: var Address)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     val = fromHex(Address, r.parseString())
 
-proc readValue*(r: var JsonReader[EthJson], val: var Hash32)
+proc readValue*[F: Web3JsonFlavors](r: var JsonReader[F], val: var Hash32)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
     let hexStr = r.parseString()
     if not valid(hexStr):
@@ -275,12 +303,12 @@ proc readValue*(r: var JsonReader[EthJson], val: var Hash32)
     wrapValueError:
       val = fromHex(Hash32, hexStr)
 
-proc writeValue*(w: var JsonWriter[EthJson], v: Number)
+proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: Number)
       {.gcsafe, raises: [IOError].} =
   w.streamElement(s):
     s.writeText distinctBase(v)
 
-proc readValue*(r: var JsonReader[EthJson], val: var Number)
+proc readValue*[F: Web3JsonFlavors](r: var JsonReader[F], val: var Number)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     val = r.parseInt(uint64).Number
@@ -357,17 +385,17 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var seq[SystemC
     val.add SystemContractPair(name: k, address: v)
 
 #------------------------------------------------------------------------------
-# Exclusive to EthJson
+# RPC-compatible Ethereum JSON
 #------------------------------------------------------------------------------
 
-proc writeValue*(w: var JsonWriter[EthJson], v: uint64 | uint8)
+proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: uint64 | uint8)
       {.gcsafe, raises: [IOError].} =
   w.streamElement(s):
     s.write "\"0x"
     s.toHex(v)
     s.write "\""
 
-proc readValue*(r: var JsonReader[EthJson], val: var (uint8 | uint64))
+proc readValue*[F: Web3JsonFlavors](r: var JsonReader[F], val: var (uint8 | uint64))
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   let hexStr = r.parseString()
   if hexStr.invalidQuantityPrefix:
@@ -375,11 +403,11 @@ proc readValue*(r: var JsonReader[EthJson], val: var (uint8 | uint64))
   wrapValueError:
     val = strutils.fromHex[typeof(val)](hexStr)
 
-proc writeValue*(w: var JsonWriter[EthJson], v: seq[byte])
+proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: seq[byte])
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, v
 
-proc readValue*(r: var JsonReader[EthJson], val: var seq[byte])
+proc readValue*[F: Web3JsonFlavors](r: var JsonReader[F], val: var seq[byte])
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     let hexStr = r.parseString()
@@ -387,7 +415,7 @@ proc readValue*(r: var JsonReader[EthJson], val: var seq[byte])
       # skip empty hex
       val = hexToSeqByte(hexStr)
 
-proc readValue*(r: var JsonReader[EthJson], val: var RtBlockIdentifier)
+proc readValue*[F: Web3JsonFlavors](r: var JsonReader[F], val: var RtBlockIdentifier)
        {.gcsafe, raises: [IOError, SerializationError].} =
   case r.tokKind
   of JsonValueKind.String:
@@ -429,27 +457,27 @@ proc readValue*(r: var JsonReader[EthJson], val: var RtBlockIdentifier)
     r.raiseUnexpectedValue(
       "RtBlockIdentifier: string or object expected")
 
-proc writeValue*(w: var JsonWriter[EthJson], v: RtBlockIdentifier)
+proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: RtBlockIdentifier)
       {.gcsafe, raises: [IOError].} =
   case v.kind
   of bidNumber: w.writeValue(v.number)
   of bidAlias: w.writeValue(v.alias)
   of bidHash: w.writeValue(v.hash)
 
-proc readValue*(r: var JsonReader[EthJson], val: var TxOrHash)
+proc readValue*[F: Web3JsonFlavors](r: var JsonReader[F], val: var TxOrHash)
        {.gcsafe, raises: [IOError, SerializationError].} =
   if r.tokKind == JsonValueKind.String:
     val = TxOrHash(kind: tohHash, hash: r.readValue(Hash32))
   else:
     val = TxOrHash(kind: tohTx, tx: r.readValue(TransactionObject))
 
-proc writeValue*(w: var JsonWriter[EthJson], v: TxOrHash)
+proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: TxOrHash)
       {.gcsafe, raises: [IOError].} =
   case v.kind
   of tohHash: w.writeValue(v.hash)
   of tohTx: w.writeValue(v.tx)
 
-proc readValue*[T](r: var JsonReader[EthJson], val: var SingleOrList[T])
+proc readValue*[T; F: Web3JsonFlavors](r: var JsonReader[F], val: var SingleOrList[T])
        {.gcsafe, raises: [IOError, SerializationError].} =
   let tok = r.tokKind()
   case tok
@@ -465,14 +493,14 @@ proc readValue*[T](r: var JsonReader[EthJson], val: var SingleOrList[T])
   else:
     r.raiseUnexpectedValue("TopicOrList unexpected token kind =" & $tok)
 
-proc writeValue*(w: var JsonWriter[EthJson], v: SingleOrList)
+proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: SingleOrList)
       {.gcsafe, raises: [IOError].} =
   case v.kind
   of slkNull: w.writeValue(JsonString("null"))
   of slkSingle: w.writeValue(v.single)
   of slkList: w.writeValue(v.list)
 
-proc readValue*(r: var JsonReader[EthJson], val: var SyncingStatus)
+proc readValue*[F: Web3JsonFlavors](r: var JsonReader[F], val: var SyncingStatus)
        {.gcsafe, raises: [IOError, SerializationError].} =
   let tok = r.tokKind()
   case tok
@@ -484,7 +512,7 @@ proc readValue*(r: var JsonReader[EthJson], val: var SyncingStatus)
   else:
     r.raiseUnexpectedValue("SyncingStatus unexpected token kind =" & $tok)
 
-proc writeValue*(w: var JsonWriter[EthJson], v: SyncingStatus)
+proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: SyncingStatus)
       {.gcsafe, raises: [IOError].} =
   if not v.syncing:
     w.writeValue(false)
@@ -492,7 +520,7 @@ proc writeValue*(w: var JsonWriter[EthJson], v: SyncingStatus)
     w.writeValue(v.syncObject)
 
 # Somehow nim2 refuse to generate automatically
-proc readValue*(r: var JsonReader[EthJson], val: var Opt[seq[ReceiptObject]])
+proc readValue*[F: Web3JsonFlavors](r: var JsonReader[F], val: var Opt[seq[ReceiptObject]])
        {.gcsafe, raises: [IOError, SerializationError].} =
   mixin readValue
 
@@ -502,7 +530,7 @@ proc readValue*(r: var JsonReader[EthJson], val: var Opt[seq[ReceiptObject]])
   else:
     val.ok r.readValue(seq[ReceiptObject])
 
-proc writeValue*(w: var JsonWriter[EthJson], v: Opt[seq[ReceiptObject]])
+proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: Opt[seq[ReceiptObject]])
       {.gcsafe, raises: [IOError].} =
   mixin writeValue
 
@@ -511,21 +539,21 @@ proc writeValue*(w: var JsonWriter[EthJson], v: Opt[seq[ReceiptObject]])
   else:
     w.writeValue JsonString("null")
 
-proc writeValue*(w: var JsonWriter[EthJson], v: seq[PrecompilePair])
+proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: seq[PrecompilePair])
       {.gcsafe, raises: [IOError].} =
   w.beginObject()
   for x in v:
     w.writeMember(x.name, x.address)
   w.endObject()
 
-proc writeValue*(w: var JsonWriter[EthJson], v: seq[SystemContractPair])
+proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: seq[SystemContractPair])
       {.gcsafe, raises: [IOError].} =
   w.beginObject()
   for x in v:
     w.writeMember(x.name, x.address)
   w.endObject()
 
-proc writeValue*(w: var JsonWriter[EthJson], v: TransactionArgs)
+proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: TransactionArgs)
       {.gcsafe, raises: [IOError].} =
   mixin writeValue
   var
@@ -546,7 +574,7 @@ proc writeValue*(w: var JsonWriter[EthJson], v: TransactionArgs)
       w.writeMember(k, val)
   w.endObject()
 
-proc readValue*(r: var JsonReader[EthJson], val: var StorageValuesRequest)
+proc readValue*[F: Web3JsonFlavors](r: var JsonReader[F], val: var StorageValuesRequest)
       {.gcsafe, raises: [IOError, SerializationError].} =
   mixin readValue
 
@@ -557,7 +585,7 @@ proc readValue*(r: var JsonReader[EthJson], val: var StorageValuesRequest)
     readValue(r, value.data)
     val.list.add(move(value))
 
-proc writeValue*(w: var JsonWriter[EthJson], v: StorageValuesRequest)
+proc writeValue*[F: Web3JsonFlavors](w: var JsonWriter[F], v: StorageValuesRequest)
       {.gcsafe, raises: [IOError].} =
   mixin writeValue
   w.beginObject()
