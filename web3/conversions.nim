@@ -550,6 +550,10 @@ proc writeValue*(w: var JsonWriter[EthRpcJson], v: ReceiptObject)
       {.gcsafe, raises: [IOError].} =
   mixin writeValue
 
+  if v.isNil:
+    w.writeValue JsonString("null")
+    return
+
   w.beginObject()
   w.writeMember("transactionHash", v.transactionHash)
   w.writeMember("transactionIndex", v.transactionIndex)
